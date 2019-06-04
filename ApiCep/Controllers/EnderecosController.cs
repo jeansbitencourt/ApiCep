@@ -24,15 +24,17 @@ namespace ApiCep.Controllers
         [HttpGet("{cep}")]
         public async Task<ActionResult<Endereco>> GetEndereco(string cep)
         {
-            var endereco = await _context.Endereco.SingleOrDefaultAsync(c => c.Cep.Replace("-", "") == cep);
+            var endereco = await _context.Endereco.SingleOrDefaultAsync(c => c.Cep.Replace("-", "") == cep.Replace("-", ""));
 
             if (endereco == null || DateTime.Now > endereco.ValidadeConsulta)
             {
                 var response = await ConsultaViaCep(cep);
 
-                if(response == null)
+                if(response == null || response.Contains("Erro:"))
                 {
-                    if(endereco == null)
+                    if (response.Contains("Erro:"))
+                        return StatusCode(400, new Erro { Code = 400, Message = response });
+                    if (endereco == null)
                         return StatusCode(400, new Erro { Code = 400, Message = "Ocorreu um erro ao buscar o CEP informado. Tente novamente mais tarde." });
                     return endereco;
                 }
@@ -41,7 +43,6 @@ namespace ApiCep.Controllers
                     endereco = new Endereco();
                 
                 Endereco viaCepEndereco = JsonConvert.DeserializeObject<Endereco>(response);
-
                 endereco.ValidadeConsulta = DateTime.Now.AddDays(10);
                 endereco.Cep = viaCepEndereco.Cep;
                 endereco.Logradouro = viaCepEndereco.Logradouro;
@@ -77,8 +78,10 @@ namespace ApiCep.Controllers
                 StreamReader sjson = new StreamReader(response.GetResponseStream());
                 return sjson.ReadToEnd();
             }
-            catch (WebException e) when (e.Status == WebExceptionStatus.Timeout)
+            catch (WebException e)
             {
+                if (e.Status.Equals(WebExceptionStatus.ProtocolError))
+                    return "Erro: " + e.Message + " Verifique o CEP digitado e tente novamente.";
                 return null;
             }
         }
