@@ -24,7 +24,7 @@ namespace ApiCep.Controllers
         [HttpGet("{cep}")]
         public async Task<ActionResult<Endereco>> GetEndereco(string cep)
         {
-            var endereco = await _context.Endereco.SingleOrDefaultAsync(c => c.Cep.Replace("-", "") == cep.Replace("-", ""));
+            var endereco = await _context.Endereco.SingleOrDefaultAsync(c => c.Cep.Replace("-", "").Replace(".", "") == cep.Replace("-", "").Replace(".", ""));
 
             if (endereco == null || DateTime.Now > endereco.ValidadeConsulta)
             {
