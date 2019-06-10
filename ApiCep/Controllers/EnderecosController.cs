@@ -30,18 +30,21 @@ namespace ApiCep.Controllers
             {
                 var response = await ConsultaViaCep(cep);
 
-                if(response == null || response.Contains("Erro:"))
+                if (response == null)
                 {
-                    if (response.Contains("Erro:"))
-                        return StatusCode(400, new Erro { Code = 400, Message = response });
                     if (endereco == null)
                         return StatusCode(400, new Erro { Code = 400, Message = "Ocorreu um erro ao buscar o CEP informado. Tente novamente mais tarde." });
                     return endereco;
                 }
-
+                else
+                {
+                    if (response.Contains("Erro:"))
+                        return StatusCode(400, new Erro { Code = 400, Message = response });
+                }
+                
                 if (endereco == null)
                     endereco = new Endereco();
-                
+
                 Endereco viaCepEndereco = JsonConvert.DeserializeObject<Endereco>(response);
                 endereco.ValidadeConsulta = DateTime.Now.AddDays(10);
                 endereco.Cep = viaCepEndereco.Cep;
@@ -54,9 +57,16 @@ namespace ApiCep.Controllers
                 endereco.Ibge = viaCepEndereco.Ibge;
                 endereco.Gia = viaCepEndereco.Gia;
 
-                if (endereco.Id.Equals(0))
-                    await _context.Endereco.AddAsync(endereco);
-                await _context.SaveChangesAsync();
+                if (!string.IsNullOrEmpty(endereco.Cep))
+                {
+                    if (endereco.Id.Equals(0))
+                        await _context.Endereco.AddAsync(endereco);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    return StatusCode(400, new Erro { Code = 400, Message = "Verifique o CEP digitado e tente novamente." });
+                }
             }
 
             return endereco;
